@@ -3,13 +3,14 @@ import glob
 import importlib
 import logging
 import os
+import queue
 import sys
 import threading
 
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.0"
+EXT_VERSION = "0.1.1"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
@@ -124,8 +125,10 @@ class Extension:
         self.force_draw = False
         self.image_cache_path = os.path.expanduser(os.path.join(peripherals.cache_path, "images"))
         self.image_cache = {}
+        self.download_queue = queue.Queue()
         self.image_cache_lock = threading.Lock()
 
+        threading.Thread(target=self.downloader, daemon=True).start()
         threading.Thread(target=utils.delete_old_files, daemon=True, args=(
             os.path.join(peripherals.cache_path, "images"),
             self.app.config["max_thumb_cache_age"],
@@ -252,27 +255,17 @@ class Extension:
                         except Exception:
                             pass
 
-                    # download
+                    # download and draw
                     img_url = f"{img_url}&format={img_format}&quality={img_quality}&width={img_w}&height={img_h}"
                     img_name = f"{image_id}_{img_w}_{img_h}.{img_format}"
-                    image_path = self.app.discord.get_file(img_url, self.image_cache_path, file_name=img_name, cache=True)
-
-                    # upload image to kitty
                     kitty_image_id = self.get_free_id(image_cache)
-                    with self.app.tui.lock:
-                        if support_media:
-                            success = kitty_upload_image(image_path, kitty_image_id)
-                        else:
-                            success = kitty_upload_png(image_path, kitty_image_id)
-                    if success:
-                        image_cache[image_id] = (kitty_image_id, rel_y, rel_x, h, w, img_scale)
-                        self.force_draw = True
+                    self.download_queue.put((img_url, img_name, kitty_image_id, rel_y, rel_x, h, w, img_scale))
+                    image_cache[image_id] = (kitty_image_id, rel_y, rel_x, h, w, img_scale)
                 else:
                     image_cache[image_id] = (self.image_cache[image_id][0], rel_y, rel_x, h, w, self.image_cache[image_id][5])
 
             # update cahanged images and delete unused cache
             if image_cache != self.image_cache:
-
                 deleted_kitty = []
                 with self.image_cache_lock:
                     for image_id in self.image_cache:
@@ -285,3 +278,38 @@ class Extension:
                         kitty_delete_images_by_id(kitty_image_id)
                 self.force_draw = True
                 self.on_chat_draw()
+
+
+    def downloader(self):
+        """Download image and draw it"""
+        while self.run:
+            img_url, img_name, kitty_image_id, rel_y, rel_x, h, w, img_scale = self.download_queue.get()
+            image_path = self.app.discord.get_file(img_url, self.image_cache_path, file_name=img_name, cache=True)
+            with self.app.tui.lock:
+                if support_media:
+                    success = kitty_upload_image(image_path, kitty_image_id)
+                else:
+                    success = kitty_upload_png(image_path, kitty_image_id)
+            if not success:
+                return
+
+            chat_y, chat_x = self.app.tui.win_chat.getbegyx()
+            chat_h = self.app.tui.chat_hw[0]
+            with self.app.tui.lock:
+                with self.image_cache_lock:
+                    abs_y = chat_h - (rel_y - self.app.tui.chat_index - self.app.tui.have_title + 1)
+                    if abs_y - chat_y <= -h or abs_y >= chat_h:
+                        return
+                    abs_x = chat_x + rel_x
+                    cut_y = None
+                    cut_h = None
+                    h_1 = h
+                    if abs_y > chat_h - h + 1:
+                        h_1 = min(h, chat_h - abs_y + 1)
+                        cut_h = int(h_1 * self.cell_h * img_scale)
+                    if abs_y <= 0:
+                        h_1 += abs_y - chat_y
+                        cut_y = int(((-abs_y * self.cell_h) + self.cell_h) * img_scale)
+                        abs_y = chat_y
+                    # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
+                    kitty_draw_image_by_id(kitty_image_id, x=abs_x, y=abs_y, w=w, h=h_1, cut_y=cut_y, cut_h=cut_h)
