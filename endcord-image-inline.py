@@ -291,7 +291,7 @@ class Extension:
                 else:
                     success = kitty_upload_png(image_path, kitty_image_id)
             if not success:
-                return
+                continue
 
             chat_y, chat_x = self.app.tui.win_chat.getbegyx()
             chat_h = self.app.tui.chat_hw[0]
@@ -299,7 +299,7 @@ class Extension:
                 with self.image_cache_lock:
                     abs_y = chat_h - (rel_y - self.app.tui.chat_index - self.app.tui.have_title + 1)
                     if abs_y - chat_y <= -h or abs_y >= chat_h:
-                        return
+                        continue
                     abs_x = chat_x + rel_x
                     cut_y = None
                     cut_h = None
