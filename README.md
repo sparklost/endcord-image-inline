@@ -14,7 +14,7 @@ Available options:
 - Or use endcord client-side command `install_extension sparklost/endcord-image-inline`
 
 
-# Configuration
+## Configuration
 This extension is using already existing endcord options:
 - `inline_media = True`  
     Toggle this extension ON/OFF.
