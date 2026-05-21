@@ -3,8 +3,8 @@ An extension for [endcord](https://github.com/sparklost/endcord) discord TUI cli
 Should work on all terminals with kitty image protocol support.  
 If running on endcord-lite (without media support) it will use significantly more bandwidth because it is downloading unresized png images.  
 When installed it will replace existing inline image drawing (only if kitty-protocol is supported by current terminal).  
-If running in termux, dont forget to set `allow-passthrough`.  
-If there are issues with terminals that have kitty protocol, other than kitty itself, its **therir problem**.  
+If running in tmux, don't forget to set `allow-passthrough`.  
+If there are issues with terminals that have kitty protocol, other than kitty itself, its **their problem**.  
 
 ## Installing
 See [official extensions documentation](https://github.com/sparklost/endcord/blob/main/extensions.md#installing-extensions) for installing instructions.
