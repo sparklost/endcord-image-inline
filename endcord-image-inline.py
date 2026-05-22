@@ -10,7 +10,7 @@ import threading
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.1"
+EXT_VERSION = "0.1.12"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
@@ -92,8 +92,9 @@ class Extension:
 
     def __init__(self, app):
         self.app = app
+        self.tui = app.tui
         self.run = True
-        kitty_supported = getattr(self.app.tui, "kitty_supported", None)
+        kitty_supported = getattr(self.tui, "kitty_supported", None)
         if kitty_supported is False or (kitty_supported is not True and not check_kitty()):
             logger.warning("No kitty protocol support detected in this terminal")
             self.run = False
@@ -106,7 +107,7 @@ class Extension:
         if not self.run:
             del type(self).on_chat_update
             del type(self).on_chat_draw
-            self.app.tui.kitty_supported = False
+            self.tui.kitty_supported = False
             return
 
         self.app.placeholder_images = True
@@ -121,19 +122,19 @@ class Extension:
         self.drawing = threading.Event()
         self.prev_chat_index = None
         self.prev_chat_hw = None
-        self.prew_win_hw = self.app.tui.screen_hw
+        self.prew_win_hw = self.tui.screen_hw
         self.force_draw = False
         self.image_cache_path = os.path.expanduser(os.path.join(peripherals.cache_path, "images"))
         self.image_cache = {}
         self.download_queue = queue.Queue()
         self.image_cache_lock = threading.Lock()
 
-        threading.Thread(target=self.downloader, daemon=True).start()
         threading.Thread(target=utils.delete_old_files, daemon=True, args=(
             os.path.join(peripherals.cache_path, "images"),
             self.app.config["max_thumb_cache_age"],
             True,
         )).start()
+        threading.Thread(target=self.downloader, daemon=True).start()
         threading.Thread(target=self.worker, daemon=True).start()
 
 
@@ -145,18 +146,18 @@ class Extension:
 
     def on_chat_draw(self):
         """Re-calculate image positions and draw them"""
-        if not self.force_draw and self.prev_chat_index == self.app.tui.chat_index and self.prev_chat_hw == self.app.tui.chat_hw:
+        if not self.force_draw and self.prev_chat_index == self.tui.chat_index and self.prev_chat_hw == self.tui.chat_hw:
             return
-        if self.prew_win_hw != self.app.tui.screen_hw:
-            self.prew_win_hw = self.app.tui.screen_hw
+        if self.prew_win_hw != self.tui.screen_hw:
+            self.prew_win_hw = self.tui.screen_hw
             self.reupload_all()
-        chat_y, chat_x = self.app.tui.win_chat.getbegyx()
-        chat_h = self.app.tui.chat_hw[0]
-        with self.app.tui.lock:
+        with self.tui.lock:
+            chat_y, chat_x = self.tui.win_chat.getbegyx()
+            chat_h = self.tui.chat_hw[0]
             with self.image_cache_lock:
                 for kitty_image_id, rel_y, rel_x, h, w, img_scale in self.image_cache.values():
                     kitty_clear_images_by_id(kitty_image_id)
-                    abs_y = chat_h - (rel_y - self.app.tui.chat_index - self.app.tui.have_title + 1)
+                    abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title + 1)
                     if abs_y - chat_y <= -h or abs_y >= chat_h:
                         continue
                     abs_x = chat_x + rel_x
@@ -172,14 +173,19 @@ class Extension:
                         abs_y = chat_y
                     # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
                     kitty_draw_image_by_id(kitty_image_id, x=abs_x, y=abs_y, w=w, h=h_1, cut_y=cut_y, cut_h=cut_h)
-        self.prev_chat_index = self.app.tui.chat_index
-        self.prev_chat_hw = self.app.tui.chat_hw
+        self.prev_chat_index = self.tui.chat_index
+        self.prev_chat_hw = self.tui.chat_hw
+
+
+    def on_force_redraw(self):
+        """When curses screen.clear(), kitty images are cleared too so redraw them"""
+        self.reupload_all()
 
 
     def reupload_all(self):
         """Delete all images and trigger reupload"""
         for image in self.image_cache.values():
-            with self.app.tui.lock:
+            with self.tui.lock:
                 kitty_clear_images_by_id(image[0])
                 kitty_delete_images_by_id(image[0])
         self.image_cache = {}
@@ -259,7 +265,7 @@ class Extension:
                     img_url = f"{img_url}&format={img_format}&quality={img_quality}&width={img_w}&height={img_h}"
                     img_name = f"{image_id}_{img_w}_{img_h}.{img_format}"
                     kitty_image_id = self.get_free_id(image_cache)
-                    self.download_queue.put((img_url, img_name, kitty_image_id, rel_y, rel_x, h, w, img_scale))
+                    self.download_queue.put((img_url, img_name, image_id, kitty_image_id, rel_y, rel_x, h, w, img_scale))
                     image_cache[image_id] = (kitty_image_id, rel_y, rel_x, h, w, img_scale)
                 else:
                     image_cache[image_id] = (self.image_cache[image_id][0], rel_y, rel_x, h, w, self.image_cache[image_id][5])
@@ -272,7 +278,7 @@ class Extension:
                         if image_id not in image_cache:
                             deleted_kitty.append(self.image_cache[image_id][0])
                     self.image_cache = image_cache
-                with self.app.tui.lock:
+                with self.tui.lock:
                     for kitty_image_id in deleted_kitty:
                         kitty_clear_images_by_id(kitty_image_id)
                         kitty_delete_images_by_id(kitty_image_id)
@@ -283,21 +289,25 @@ class Extension:
     def downloader(self):
         """Download image and draw it"""
         while self.run:
-            img_url, img_name, kitty_image_id, rel_y, rel_x, h, w, img_scale = self.download_queue.get()
+            img_url, img_name, image_id, kitty_image_id, rel_y, rel_x, h, w, img_scale = self.download_queue.get()
             image_path = self.app.discord.get_file(img_url, self.image_cache_path, file_name=img_name, cache=True)
-            with self.app.tui.lock:
+            if not image_path:
+                continue
+            with self.tui.lock:
                 if support_media:
                     success = kitty_upload_image(image_path, kitty_image_id)
                 else:
                     success = kitty_upload_png(image_path, kitty_image_id)
             if not success:
                 continue
+            if image_id not in self.image_cache:
+                continue
 
-            chat_y, chat_x = self.app.tui.win_chat.getbegyx()
-            chat_h = self.app.tui.chat_hw[0]
-            with self.app.tui.lock:
+            chat_y, chat_x = self.tui.win_chat.getbegyx()
+            chat_h = self.tui.chat_hw[0]
+            with self.tui.lock:
                 with self.image_cache_lock:
-                    abs_y = chat_h - (rel_y - self.app.tui.chat_index - self.app.tui.have_title + 1)
+                    abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title + 1)
                     if abs_y - chat_y <= -h or abs_y >= chat_h:
                         continue
                     abs_x = chat_x + rel_x
