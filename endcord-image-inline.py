@@ -10,7 +10,7 @@ import threading
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.2"
+EXT_VERSION = "0.1.3"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
@@ -64,7 +64,6 @@ def kitty_upload_image(path, image_id):
 
 def kitty_draw_image_by_id(image_id, x, y, w=None, h=None, cut_y=None, cut_h=None):
     """Draw previously uploaded image by its id"""
-    os.write(sys.stdout.fileno(), f"\0337\033[{y+1};{x+1}H".encode())   # save and move cursor
     header = f"a=p,q=2,z=-1,i={image_id}"
     if w is not None:
         header += f",c={w}"
@@ -74,7 +73,8 @@ def kitty_draw_image_by_id(image_id, x, y, w=None, h=None, cut_y=None, cut_h=Non
         header += f",y={cut_y}"
     if cut_h is not None:
         header += f",h={cut_h}"
-    os.write(sys.stdout.fileno(), f"\033_G{header}\033\\\0338".encode())   # \0338 is restore cursor
+    # \0337 is remember cursor, \0338 is restore cursor, \033[y,x]H is move cursor
+    os.write(sys.stdout.fileno(), f"\0337\033[{y+1};{x+1}H\033_G{header}\033\\\0338".encode())
 
 
 def kitty_delete_images_by_id(image_id):
