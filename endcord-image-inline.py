@@ -10,7 +10,7 @@ import threading
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.3"
+EXT_VERSION = "0.1.4"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
