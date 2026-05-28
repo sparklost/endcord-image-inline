@@ -107,6 +107,7 @@ class Extension:
         if not self.run:
             del type(self).on_chat_update
             del type(self).on_chat_draw
+            del type(self).on_force_redraw
             self.tui.kitty_supported = False
             return
 
@@ -119,10 +120,9 @@ class Extension:
 
         self.chat_map = []
         self.update = threading.Event()
-        self.drawing = threading.Event()
         self.prev_chat_index = None
         self.prev_chat_hw = None
-        self.prew_win_hw = self.tui.screen_hw
+        self.prev_win_hw = self.tui.screen_hw
         self.force_draw = False
         self.image_cache_path = os.path.expanduser(os.path.join(peripherals.cache_path, "images"))
         self.image_cache = {}
@@ -148,8 +148,8 @@ class Extension:
         """Re-calculate image positions and draw them"""
         if not self.force_draw and self.prev_chat_index == self.tui.chat_index and self.prev_chat_hw == self.tui.chat_hw:
             return
-        if self.prew_win_hw != self.tui.screen_hw:
-            self.prew_win_hw = self.tui.screen_hw
+        if self.prev_win_hw != self.tui.screen_hw:
+            self.prev_win_hw = self.tui.screen_hw
             self.reupload_all()
         with self.tui.lock:
             chat_y, chat_x = self.tui.win_chat.getbegyx()
