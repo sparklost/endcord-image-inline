@@ -220,11 +220,16 @@ class Extension:
                 if not img_pos or len(img_pos) < 4:
                     continue
                 rel_x, w, embed_idx, h, = img_pos
-
-                # get message and image info
                 try:
                     message = self.app.messages[line_map[0]]
                     message_id = message["id"]
+                    image_id = f"{message_id}_{embed_idx}"
+                except IndexError:
+                    continue
+
+                # download and cache (disk and ram)
+                if image_id not in self.image_cache:
+                    # get message and image info
                     embed = message["embeds"][embed_idx]
                     img_url = embed["proxy_url"]
                     img_h, img_w = embed["hw"]
@@ -232,12 +237,7 @@ class Extension:
                     img_w = round(img_w * scale)
                     img_h = round(img_h * scale)
                     img_scale = 1
-                    image_id = f"{message_id}_{embed_idx}"
-                except IndexError:
-                    continue
 
-                # download and cache (disk and ram)
-                if image_id not in self.image_cache:
                     img_format = "webp" if support_media else "png"
                     img_quality = "lossless" if support_media and "//media." in img_url else self.inline_media_quality
                     if img_url.endswith("&"):
