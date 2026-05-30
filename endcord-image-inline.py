@@ -10,7 +10,7 @@ import threading
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.4"
+EXT_VERSION = "0.1.5"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
@@ -155,7 +155,9 @@ class Extension:
             chat_y, chat_x = self.tui.win_chat.getbegyx()
             chat_h = self.tui.chat_hw[0]
             with self.image_cache_lock:
-                for kitty_image_id, rel_y, rel_x, h, w, img_scale in self.image_cache.values():
+                for kitty_image_id, rel_y, rel_x, h, w, img_scale, draw in self.image_cache.values():
+                    if not draw:
+                        continue
                     kitty_clear_images_by_id(kitty_image_id)
                     abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title + 1)
                     if abs_y - chat_y <= -h or abs_y >= chat_h:
@@ -224,6 +226,10 @@ class Extension:
                     message = self.app.messages[line_map[0]]
                     message_id = message["id"]
                     image_id = f"{message_id}_{embed_idx}"
+                    embed_name = message["embeds"][embed_idx]["name"]
+                    draw = not (embed_name and embed_name.startswith("SPOILER_"))
+                    if not draw:
+                        draw = 1000 + embed_idx in message.get("spoiled", [])
                 except IndexError:
                     continue
 
@@ -265,10 +271,10 @@ class Extension:
                     img_url = f"{img_url}&format={img_format}&quality={img_quality}&width={img_w}&height={img_h}"
                     img_name = f"{image_id}_{img_w}_{img_h}.{img_format}"
                     kitty_image_id = self.get_free_id(image_cache)
-                    self.download_queue.put((img_url, img_name, image_id, kitty_image_id, rel_y, rel_x, h, w, img_scale))
-                    image_cache[image_id] = (kitty_image_id, rel_y, rel_x, h, w, img_scale)
+                    self.download_queue.put((img_url, img_name, image_id, kitty_image_id, rel_y, rel_x, h, w, img_scale, draw))
+                    image_cache[image_id] = (kitty_image_id, rel_y, rel_x, h, w, img_scale, draw)
                 else:
-                    image_cache[image_id] = (self.image_cache[image_id][0], rel_y, rel_x, h, w, self.image_cache[image_id][5])
+                    image_cache[image_id] = (self.image_cache[image_id][0], rel_y, rel_x, h, w, self.image_cache[image_id][5], draw)
 
             # update cahanged images and delete unused cache
             if image_cache != self.image_cache:
@@ -289,7 +295,7 @@ class Extension:
     def downloader(self):
         """Download image and draw it"""
         while self.run:
-            img_url, img_name, image_id, kitty_image_id, rel_y, rel_x, h, w, img_scale = self.download_queue.get()
+            img_url, img_name, image_id, kitty_image_id, rel_y, rel_x, h, w, img_scale, draw = self.download_queue.get()
             image_path = self.app.discord.get_file(img_url, self.image_cache_path, file_name=img_name, cache=True)
             if not image_path:
                 continue
@@ -301,6 +307,8 @@ class Extension:
             if not success:
                 continue
             if image_id not in self.image_cache:
+                continue
+            if not draw:
                 continue
 
             chat_y, chat_x = self.tui.win_chat.getbegyx()
