@@ -10,7 +10,7 @@ import threading
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.5"
+EXT_VERSION = "0.1.6"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
@@ -296,7 +296,7 @@ class Extension:
         """Download image and draw it"""
         while self.run:
             img_url, img_name, image_id, kitty_image_id, rel_y, rel_x, h, w, img_scale, draw = self.download_queue.get()
-            image_path = self.app.discord.get_file(img_url, self.image_cache_path, file_name=img_name, cache=True)
+            image_path = self.app.discord.get_file(img_url, self.image_cache_path, file_name=img_name, cache=True, keepalive=True)
             if not image_path:
                 continue
             with self.tui.lock:
