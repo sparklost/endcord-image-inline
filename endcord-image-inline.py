@@ -239,6 +239,8 @@ class Extension:
                     embed = message["embeds"][embed_idx]
                     img_url = embed["proxy_url"]
                     img_h, img_w = embed["hw"]
+                    if img_h == 0 or img_w == 0:
+                        continue
                     scale = min(h * self.cell_h / img_h, w * self.cell_w / img_w, 1)
                     img_w = round(img_w * scale)
                     img_h = round(img_h * scale)
