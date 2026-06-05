@@ -148,6 +148,8 @@ class Extension:
         """Re-calculate image positions and draw them"""
         if not self.force_draw and self.prev_chat_index == self.tui.chat_index and self.prev_chat_hw == self.tui.chat_hw:
             return
+        if self.tui.disable_drawing:
+            return
         if self.prev_win_hw != self.tui.screen_hw:
             self.prev_win_hw = self.tui.screen_hw
             self.reupload_all()
@@ -306,11 +308,7 @@ class Extension:
                     success = kitty_upload_image(image_path, kitty_image_id)
                 else:
                     success = kitty_upload_png(image_path, kitty_image_id)
-            if not success:
-                continue
-            if image_id not in self.image_cache:
-                continue
-            if not draw:
+            if not success or not draw or image_id not in self.image_cache or self.tui.disable_drawing:
                 continue
 
             chat_y, chat_x = self.tui.win_chat.getbegyx()
