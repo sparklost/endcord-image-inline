@@ -7,7 +7,7 @@ If running in tmux, don't forget to set `allow-passthrough`.
 If there are issues with terminals that have kitty protocol, other than kitty itself, its **their problem**.  
 
 ## Installing
-See [official extensions documentation](https://github.com/sparklost/endcord/blob/main/extensions.md#installing-extensions) for installing instructions.
+See [official extensions documentation](https://github.com/sparklost/endcord/blob/main/docs/extensions.md#installing-extensions) for installing instructions.
 Available options:
 - Git clone into `Extensions` directory located in endcord config directory.
 - Run `endcord -i https://github.com/sparklost/endcord-image-inline`
