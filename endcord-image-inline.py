@@ -10,7 +10,7 @@ import threading
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.8"
+EXT_VERSION = "0.1.9"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
@@ -157,11 +157,12 @@ class Extension:
             chat_y, chat_x = self.tui.win_chat.getbegyx()
             chat_h = self.tui.chat_hw[0]
             with self.image_cache_lock:
+                subtitle_line = bool(self.tui.win_subtitle_line)
                 for kitty_image_id, rel_y, rel_x, h, w, img_scale, draw in self.image_cache.values():
                     if not draw:
                         continue
                     kitty_clear_images_by_id(kitty_image_id)
-                    abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title + 1)
+                    abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title - subtitle_line + 1)
                     if abs_y - chat_y <= -h or abs_y >= chat_h:
                         continue
                     abs_x = chat_x + rel_x
@@ -170,10 +171,10 @@ class Extension:
                     h_1 = h
                     if abs_y > chat_h - h + 1:
                         h_1 = min(h, chat_h - abs_y + 1)
-                        cut_h = int(h_1 * self.cell_h * img_scale)
-                    if abs_y <= 0:
+                        cut_h = int(h_1 * self.cell_h * img_scale) + subtitle_line
+                    if abs_y <= subtitle_line:
                         h_1 += abs_y - chat_y
-                        cut_y = int(((-abs_y * self.cell_h) + self.cell_h) * img_scale)
+                        cut_y = int(((-abs_y * self.cell_h) + self.cell_h * (1 + subtitle_line)) * img_scale)
                         abs_y = chat_y
                     # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
                     kitty_draw_image_by_id(kitty_image_id, x=abs_x, y=abs_y, w=w, h=h_1, cut_y=cut_y, cut_h=cut_h)
@@ -319,7 +320,8 @@ class Extension:
             chat_h = self.tui.chat_hw[0]
             with self.tui.lock:
                 with self.image_cache_lock:
-                    abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title + 1)
+                    subtitle_line = bool(self.tui.win_subtitle_line)
+                    abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title - subtitle_line + 1)
                     if abs_y - chat_y <= -h or abs_y >= chat_h:
                         continue
                     abs_x = chat_x + rel_x
@@ -328,10 +330,10 @@ class Extension:
                     h_1 = h
                     if abs_y > chat_h - h + 1:
                         h_1 = min(h, chat_h - abs_y + 1)
-                        cut_h = int(h_1 * self.cell_h * img_scale)
-                    if abs_y <= 0:
+                        cut_h = int(h_1 * self.cell_h * img_scale) + subtitle_line
+                    if abs_y <= subtitle_line:
                         h_1 += abs_y - chat_y
-                        cut_y = int(((-abs_y * self.cell_h) + self.cell_h) * img_scale)
+                        cut_y = int(((-abs_y * self.cell_h) + self.cell_h * (1 + subtitle_line)) * img_scale)
                         abs_y = chat_y
                     # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
                     kitty_draw_image_by_id(kitty_image_id, x=abs_x, y=abs_y, w=w, h=h_1, cut_y=cut_y, cut_h=cut_h)
