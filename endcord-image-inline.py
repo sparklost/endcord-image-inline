@@ -10,7 +10,7 @@ import threading
 from endcord import peripherals, terminal_utils, utils
 
 EXT_NAME = "Image Inline"
-EXT_VERSION = "0.1.9"
+EXT_VERSION = "0.1.10"
 EXT_ENDCORD_VERSION = "1.5.0"
 EXT_DESCRIPTION = "An extension that adds drawing inline images in the chat using kitty protocol"
 EXT_SOURCE = "https://github.com/sparklost/endcord-image-inline"
@@ -62,9 +62,9 @@ def kitty_upload_image(path, image_id):
     return True
 
 
-def kitty_draw_image_by_id(image_id, x, y, w=None, h=None, cut_y=None, cut_h=None):
+def kitty_draw_image_by_id(image_id, x, y, w=None, h=None, cut_y=None, cut_h=None, z=-1):
     """Draw previously uploaded image by its id"""
-    header = f"a=p,q=2,z=-1,i={image_id}"
+    header = f"a=p,q=2,z={z},i={image_id}"
     if w is not None:
         header += f",c={w}"
     if h is not None:
@@ -168,12 +168,13 @@ class Extension:
                     abs_x = chat_x + rel_x
                     cut_y = None
                     cut_h = None
-                    h_1 = h
+                    h_1 = None
                     if abs_y > chat_h - h + 1:
                         h_1 = min(h, chat_h - abs_y + 1)
                         cut_h = int(h_1 * self.cell_h * img_scale) + subtitle_line
                     if abs_y <= subtitle_line:
-                        h_1 += abs_y - chat_y
+                        h_1 = h_1 if h_1 else h
+                        h_1 = abs_y - chat_y
                         cut_y = int(((-abs_y * self.cell_h) + self.cell_h * (1 + subtitle_line)) * img_scale)
                         abs_y = chat_y
                     # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
@@ -327,11 +328,12 @@ class Extension:
                     abs_x = chat_x + rel_x
                     cut_y = None
                     cut_h = None
-                    h_1 = h
+                    h_1 = None
                     if abs_y > chat_h - h + 1:
                         h_1 = min(h, chat_h - abs_y + 1)
                         cut_h = int(h_1 * self.cell_h * img_scale) + subtitle_line
                     if abs_y <= subtitle_line:
+                        h_1 = h_1 if h_1 else h
                         h_1 += abs_y - chat_y
                         cut_y = int(((-abs_y * self.cell_h) + self.cell_h * (1 + subtitle_line)) * img_scale)
                         abs_y = chat_y
