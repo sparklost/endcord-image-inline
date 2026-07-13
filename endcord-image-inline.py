@@ -174,7 +174,7 @@ class Extension:
                         cut_h = int(h_1 * self.cell_h * img_scale) + subtitle_line
                     if abs_y <= subtitle_line:
                         h_1 = h_1 if h_1 else h
-                        h_1 = abs_y - chat_y
+                        h_1 += abs_y - chat_y
                         cut_y = int(((-abs_y * self.cell_h) + self.cell_h * (1 + subtitle_line)) * img_scale)
                         abs_y = chat_y
                     # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
