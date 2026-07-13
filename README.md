@@ -28,7 +28,6 @@ This extension is using already existing endcord options:
     Aspect ratio of character height / width. It is automatically detected, but if its wrong, set it here to float value eg `2.25`.
 
 ## Disclaimer
-This extension is usable only in bots which should not be breaking any ToS, byt here's a warning anyway:  
 > [!WARNING]
 > Using third-party client is against Discord's Terms of Service and may cause your account to be banned!  
 > **Use endcord and/or this extension at your own risk!**  
