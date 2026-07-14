@@ -163,21 +163,18 @@ class Extension:
                         continue
                     kitty_clear_images_by_id(kitty_image_id)
                     abs_y = chat_h - (rel_y - self.tui.chat_index - self.tui.have_title - subtitle_line + 1)
-                    if abs_y - chat_y <= -h or abs_y >= chat_h:
+                    if abs_y - chat_y <= -h or abs_y >= chat_h + 1 + subtitle_line:
                         continue
                     abs_x = chat_x + rel_x
                     cut_y = None
                     cut_h = None
-                    h_1 = None
-                    if abs_y > chat_h - h + 1:
-                        h_1 = min(h, chat_h - abs_y + 1)
-                        cut_h = int(h_1 * self.cell_h * img_scale) + subtitle_line
+                    h_1 = None   # so kitty wont fit image to height causing it to deform
+                    if abs_y > chat_h - h + 1 + subtitle_line:
+                        cut_h = int(min(h, chat_h - abs_y + 1 + subtitle_line) * self.cell_h * img_scale) + subtitle_line
                     if abs_y <= subtitle_line:
-                        h_1 = h_1 if h_1 else h
-                        h_1 += abs_y - chat_y
                         cut_y = int(((-abs_y * self.cell_h) + self.cell_h * (1 + subtitle_line)) * img_scale)
                         abs_y = chat_y
-                    # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
+                    # logger.info((kitty_image_id, abs_y, rel_y, img_scale, cut_y, cut_h))
                     kitty_draw_image_by_id(kitty_image_id, x=abs_x, y=abs_y, w=w, h=h_1, cut_y=cut_y, cut_h=cut_h)
         self.prev_chat_index = self.tui.chat_index
         self.prev_chat_hw = self.tui.chat_hw
@@ -328,14 +325,11 @@ class Extension:
                     abs_x = chat_x + rel_x
                     cut_y = None
                     cut_h = None
-                    h_1 = None
+                    h_1 = None   # so kitty wont fit image to height causing it to deform
                     if abs_y > chat_h - h + 1:
-                        h_1 = min(h, chat_h - abs_y + 1)
-                        cut_h = int(h_1 * self.cell_h * img_scale) + subtitle_line
+                        cut_h = int(min(h, chat_h - abs_y + 1) * self.cell_h * img_scale) + subtitle_line
                     if abs_y <= subtitle_line:
-                        h_1 = h_1 if h_1 else h
-                        h_1 += abs_y - chat_y
                         cut_y = int(((-abs_y * self.cell_h) + self.cell_h * (1 + subtitle_line)) * img_scale)
                         abs_y = chat_y
-                    # logger.info((kitty_image_id, abs_y, rel_y, h_1, img_scale, cut_y, cut_h))
+                    # logger.info((kitty_image_id, abs_y, rel_y, img_scale, cut_y, cut_h))
                     kitty_draw_image_by_id(kitty_image_id, x=abs_x, y=abs_y, w=w, h=h_1, cut_y=cut_y, cut_h=cut_h)
