@@ -7,7 +7,12 @@ import queue
 import sys
 import threading
 
-from endcord import peripherals, terminal_utils, utils
+from endcord import peripherals, tui, utils
+
+if tui.uses_gtkcurses:
+    from endcord import gtkcurses as terminal_utils
+else:
+    from endcord import terminal_utils
 
 EXT_NAME = "Image Inline"
 EXT_VERSION = "0.1.10"
