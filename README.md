@@ -21,7 +21,7 @@ This extension is using already existing endcord options:
     Height of DISPLAYED image in chat. In number of characters.
 - `inline_media_download_size = 256`  
     Height of DOWNLOADED image thumb for chat inline media. In pixels.
-- `max_thumb_cache_age = 14`  
+- `max_thumb_cache_age = 7`  
     How long to keep cached thumbs for inline images, in days. Set `0` to clear on each new run.
 - `media_font_aspect_ratio = None`  
     Aspect ratio of character height / width. It is automatically detected, but if its wrong, set it here to float value eg `2.25`.

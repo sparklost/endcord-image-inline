@@ -7,7 +7,7 @@ import queue
 import sys
 import threading
 
-from endcord import peripherals, terminal_utils, tui, utils
+from endcord import peripherals, terminal_utils, tui
 
 EXT_NAME = "Image Inline"
 EXT_VERSION = "0.1.11"
@@ -129,11 +129,6 @@ class Extension:
         self.download_queue = queue.Queue()
         self.image_cache_lock = threading.Lock()
 
-        threading.Thread(target=utils.delete_old_files, daemon=True, args=(
-            os.path.join(peripherals.cache_path, "images"),
-            self.app.config["max_thumb_cache_age"],
-            True,
-        )).start()
         threading.Thread(target=self.downloader, daemon=True).start()
         threading.Thread(target=self.worker, daemon=True).start()
 
